@@ -1,0 +1,11 @@
+shzmfgftp004.rrd.com
+
+shzmfg-cemp01.as.ad.rrd.com
+
+bop.rrd.com
+boptest.rrd.com
+iflow.rrd.com
+INSITE-PMT
+ibusiness.customlink.com.cn
+ibusiness-test.customlink.com.cn
+shzmfgics.rrd.com

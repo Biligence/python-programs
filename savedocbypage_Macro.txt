@@ -1,0 +1,211 @@
+
+Sub SaveAsFileByPage()
+
+'分页保存,适用于WORD97及其以上版本
+    Dim objShell As Object, objFolder As Object, strNameLenth As Integer
+    Dim mySelection As Selection, myFolder As String, myArray() As String
+    Dim ThisDoc As Document, myDoc As Document, strName As String, N As Integer
+    Dim myRange As Range, PageString As String, pgOrientation As WdOrientation
+    Dim sinLeft As Single, sinRight As Single, sinTop As Single, sinBottom As Single
+    Dim ErrChar() As Variant, oChar As Variant, sinStart As Single, sinEnd As Single
+    Const myMsgTitle As String = "ExcelHome_ShouRou"
+    Dim vbYN As VbMsgBoxResult
+    sinStart = Timer
+    On Error GoTo ErrHandle    '设置错误处理
+    '创建一个Shell.Application对象
+    Set objShell = CreateObject("Shell.Application")
+    '取得文件夹浏览器
+    Set objFolder = objShell.BrowseForFolder(0, "请选择一个文件夹", 0, 0)
+    If objFolder Is Nothing Then Exit Sub
+    myFolder = objFolder.Self.Path & "\"
+    Set objFolder = Nothing: Set objShell = Nothing
+    Set ThisDoc = ActiveDocument    '定义一个Document对象,以利用本程序作为加载宏
+    Set mySelection = ThisDoc.ActiveWindow.Selection
+    '文件自动命名时必须规避的字符
+    ErrChar = Array("\", "/", ":", "*", "?", """", "<", ">", "|")
+    '一些特列字符
+    For N = 0 To 31
+        ReDim Preserve ErrChar(UBound(ErrChar) + 1)
+        ErrChar(UBound(ErrChar)) = Chr(N)
+    Next
+    strNameLenth = Val(VBA.InputBox(prompt:="请输入您需要设置的文件名长度,0或者取消将自动命名!", Title:=myMsgTitle, Default:=10))
+    If strNameLenth > 255 Then strNameLenth = 0
+    vbYN = MsgBox("是否需要处理页尾的分隔符(分页符/分节符)?它可能会影响文档结构.", vbYesNo + vbInformation + vbDefaultButton2, myMsgTitle)
+    Application.ScreenUpdating = False    '关闭屏幕更新
+    '在文档的每页中循环
+    For N = 1 To mySelection.Information(wdNumberOfPagesInDocument)
+        mySelection.GoTo What:=wdGoToPage, Which:=wdGoToNext, Name:=N
+        Set myRange = ThisDoc.Bookmarks("\PAGE").Range
+        If vbYN = vbYes And VBA.Asc(myRange.Characters.Last.Text) = 12 Then _
+           myRange.SetRange myRange.Start, myRange.End - 1
+        '取得一个以段落标记为分隔符的一维数组
+        myArray = VBA.Split(myRange.Text, Chr(13))
+        '将所有文本合并为一个字符串
+        PageString = VBA.Join(myArray, "")
+        '取得文档中每节的页面设置
+        With myRange.Sections(1).PageSetup
+            sinLeft = .LeftMargin    '左页边距
+            sinRight = .RightMargin    '右页边距
+            sinTop = .TopMargin    '上边距
+            sinBottom = .BottomMargin    '下边距
+            pgOrientation = .Orientation    '纸张方向
+        End With
+        For Each oChar In ErrChar    '进行一系列替换,即删除无效字符
+            PageString = VBA.Replace(PageString, oChar, "")
+        Next
+        If strNameLenth = 0 Then
+            strName = ThisDoc.Name
+            strName = VBA.Replace(LCase(strName), ".doc", "")
+            strName = strName & "_" & N
+        Else
+            strName = VBA.Left(PageString, strNameLenth)    '取得文件名
+        End If
+        strName = strName & ".docx"
+        myRange.Copy    '复制
+        Set myDoc = Documents.Add(Visible:=False)    '新建一个隐藏的空白文档
+        With myDoc
+            .Content.Paste    '粘贴
+            .Content.Paragraphs.Last.Range.Delete    '删除最后一个段落标记
+            With .PageSetup    '进行页面设置
+                .Orientation = pgOrientation
+                .LeftMargin = sinLeft
+                .RightMargin = sinRight
+                .TopMargin = sinTop
+                .BottomMargin = sinBottom
+            End With
+            '如果有相同的文档,则自动命名
+            If VBA.Dir(myFolder & strName, vbDirectory) <> "" Then strName = "Page_" & N & ".docx"
+            .SaveAs myFolder & strName    '另存为
+            .Close    '关闭文档
+        End With
+    Next
+    ThisDoc.Characters(1).Copy    '变相清空剪贴板
+    Application.ScreenUpdating = True    '恢复屏幕更新
+    sinEnd = Timer    '取得代码运行结束的时间
+    If MsgBox("分页保存结束,用时:" & sinEnd - sinStart & _
+              "秒,是否打开指定文件夹查看分页保存后的文档情况?", vbYesNo, myMsgTitle) = vbYes Then _
+       ThisDoc.FollowHyperlink myFolder
+    Exit Sub
+ErrHandle:
+    MsgBox "错误号:" & Err.Number & vbLf & "出错原因:" & Err.Description, myMsgTitle
+    Err.Clear
+    Application.ScreenUpdating = True    '恢复屏幕更新
+End Sub
+
+
+Sub SaveAsFileByPageHeader()
+'
+'分页保存,适用于WORD97及其以上版本
+    Dim objShell As Object, objFolder As Object, strNameLenth As Integer
+    Dim mySelection As Selection, myFolder As String, myArray() As String
+    Dim ThisDoc As Document, myDoc As Document, strName As String, N As Integer
+    Dim myRange As Range, PageString As String, pgOrientation As WdOrientation
+    Dim sinLeft As Single, sinRight As Single, sinTop As Single, sinBottom As Single
+    Dim ErrChar() As Variant, oChar As Variant, sinStart As Single, sinEnd As Single
+    Const myMsgTitle As String = "ExcelHome_ShouRou"
+    Dim vbYN As VbMsgBoxResult
+    sinStart = Timer
+    On Error GoTo ErrHandle    '设置错误处理
+    '创建一个Shell.Application对象
+    Set objShell = CreateObject("Shell.Application")
+    '取得文件夹浏览器
+    Set objFolder = objShell.BrowseForFolder(0, "请选择一个文件夹", 0, 0)
+    If objFolder Is Nothing Then Exit Sub
+    myFolder = objFolder.Self.Path & "\"
+    Set objFolder = Nothing: Set objShell = Nothing
+    Set ThisDoc = ActiveDocument    '定义一个Document对象,以利用本程序作为加载宏
+    Set mySelection = ThisDoc.ActiveWindow.Selection
+    '文件自动命名时必须规避的字符
+    ErrChar = Array("\", "/", ":", "*", "?", """", "<", ">", "|")
+    '一些特列字符
+    For N = 0 To 31
+        ReDim Preserve ErrChar(UBound(ErrChar) + 1)
+        ErrChar(UBound(ErrChar)) = Chr(N)
+    Next
+    strNameLenth = Val(VBA.InputBox(prompt:="请输入您需要设置的文件名长度,0或者取消将自动命名!", Title:=myMsgTitle, Default:=10))
+    If strNameLenth > 255 Then strNameLenth = 0
+    vbYN = MsgBox("是否需要处理页尾的分隔符(分页符/分节符)?它可能会影响文档结构.", vbYesNo + vbInformation + vbDefaultButton2, myMsgTitle)
+    Application.ScreenUpdating = False    '关闭屏幕更新
+    '在文档的每页中循环
+    For N = 1 To mySelection.Information(wdNumberOfPagesInDocument)
+        mySelection.GoTo What:=wdGoToPage, Which:=wdGoToNext, Name:=N
+        Set myRange = ThisDoc.Bookmarks("\PAGE").Range
+        If vbYN = vbYes And VBA.Asc(myRange.Characters.Last.Text) = 12 Then _
+           myRange.SetRange myRange.Start, myRange.End - 1
+        '取得一个以段落标记为分隔符的一维数组
+        myArray = VBA.Split(myRange.Text, Chr(13))
+        '将所有文本合并为一个字符串
+        PageString = VBA.Join(myArray, "")
+        '取得文档中每节的页面设置
+        With myRange.Sections(1).PageSetup
+            sinLeft = .LeftMargin    '左页边距
+            sinRight = .RightMargin    '右页边距
+            sinTop = .TopMargin    '上边距
+            sinBottom = .BottomMargin    '下边距
+            pgOrientation = .Orientation    '纸张方向
+        End With
+              
+        For Each oChar In ErrChar    '进行一系列替换,即删除无效字符
+            PageString = VBA.Replace(PageString, oChar, "")
+        Next
+        If strNameLenth = 0 Then
+            strName = ThisDoc.Name
+            strName = VBA.Replace(LCase(strName), ".doc", "")
+            strName = strName & "_" & N
+        Else
+            strName = VBA.Left(PageString, strNameLenth)    '取得文件名
+        End If
+        strName = strName & ".doc"
+            myRange.Copy    '复制
+            Set myDoc = Documents.Add(Visible:=False)    '新建一个隐藏的空白文档
+        With myDoc
+             .Sections(1).Headers(1).Range = myRange.Sections(1).Headers(1).Range
+              .Content.Paste    '粘贴
+            .Content.Paragraphs.Last.Range.Delete    '删除最后一个段落标记
+            With .PageSetup    '进行页面设置
+                .Orientation = pgOrientation
+                .LeftMargin = sinLeft
+                .RightMargin = sinRight
+                .TopMargin = sinTop
+                .BottomMargin = sinBottom
+            End With
+            
+            With .Sections(1).Headers(1).Range
+            
+            
+            ActiveDocument.ActiveWindow.ActivePane.View.SeekView = wdSeekCurrentPageHeader
+            Selection.WholeStory
+            Selection.Copy
+            Documents(myDoc).Activate
+            ActiveDocument.ActiveWindow.ActivePane.View.SeekView = wdSeekCurrentPageHeader
+            Selection.WholeStory
+            Selection.Delete
+
+            
+            Selection.PasteAndFormat (wdFormatOriginalFormatting)
+            
+             End With
+            '如果有相同的文档,则自动命名
+            If VBA.Dir(myFolder & strName, vbDirectory) <> "" Then strName = "Page_" & N & ".doc"
+            .SaveAs myFolder & strName    '另存为
+                      
+             .Close    '关闭文档
+            
+            Documents(ThisDoc).Activate
+         
+        End With
+    Next
+    ThisDoc.Characters(1).Copy    '变相清空剪贴板
+    Application.ScreenUpdating = True    '恢复屏幕更新
+    sinEnd = Timer    '取得代码运行结束的时间
+    If MsgBox("分页保存结束,用时:" & sinEnd - sinStart & _
+              "秒,是否打开指定文件夹查看分页保存后的文档情况?", vbYesNo, myMsgTitle) = vbYes Then _
+       ThisDoc.FollowHyperlink myFolder
+    Exit Sub
+ErrHandle:
+    MsgBox "错误号:" & Err.Number & vbLf & "出错原因:" & Err.Description, myMsgTitle
+    Err.Clear
+    Application.ScreenUpdating = True    '恢复屏幕更新
+'
+
+End Sub
